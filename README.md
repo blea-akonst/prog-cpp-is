@@ -1,6 +1,6 @@
 # Лабораторные работы по программированию, 2 семестр
 
-[__Лабораторная работа 1: ООП. Классы. Наследование (*in the process..*)__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab1)
+[__Лабораторная работа 1: ООП. Классы. Наследование__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab1)
 
 [__Лабораторная работа 2: Классы, перегрузка операторов (*in the process..*)__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab2)
 
