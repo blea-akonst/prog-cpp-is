@@ -1,7 +1,18 @@
 #include <iostream>
+#include "polynominal.h"
 
 int main()
 {
-  std::cout << "Здесь должна быть лаба..." << "\n";
-  return 0;
+    Polynomial poly1;
+
+    std::cin >> poly1;
+
+    Polynomial poly2(poly1);
+
+    poly1 *= poly2;
+
+    std::cout << poly1;
+    std::cout << poly1[9];
+
+    return 0;
 }
