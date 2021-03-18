@@ -9,7 +9,7 @@
 class Polynomial
 {
 private:
-    std::map<int, double> polynomial; // ассоциативный массив
+    std::map<int, double> polynomial; // ассоциативный массив степень - коэффициент
     unsigned int deg; // степень полинома
     unsigned int count; // количество одночленов
 public:
@@ -232,47 +232,13 @@ Polynomial &Polynomial::operator - ()
 
 Polynomial &Polynomial::operator += (const Polynomial &p)
 {
-    auto iter = p.polynomial.begin();
-
-    for (; iter != p.polynomial.end(); ++iter)
-    {
-        auto iter_2 = this->polynomial.find(iter->first);
-        if (iter_2 == p.polynomial.end())
-        {
-            this->polynomial[iter->first] = iter->second;
-            if (iter->first > this->deg) this->deg = iter->first;
-        }
-        else if (iter->first == iter_2->first)
-            this->polynomial[iter->first] = iter_2->second + iter->second;
-    }
-
-    iter = this->polynomial.end();
-    --iter;
-    this->deg = iter->first;
-    this->count = this->polynomial.size();
+    *this = *this + p;
     return *this;
 }
 
 Polynomial &Polynomial::operator -= (const Polynomial &p)
 {
-    auto iter = p.polynomial.begin();
-    for (; iter != p.polynomial.end(); ++iter)
-    {
-        auto iter_2 = this->polynomial.find(iter->first);
-        if (iter_2 == p.polynomial.end())
-        {
-            this->polynomial[iter->first] = -(iter->second);
-            if (iter->first > this->deg) this->deg = iter->first;
-        }
-        else if (iter->first == iter_2->first)
-            this->polynomial[iter->first] = iter_2->second - iter->second;
-    }
-
-    iter = this->polynomial.end();
-    --iter;
-    this->deg = iter->first;
-    this->count = this->polynomial.size();
-
+    *this = *this - p;
     return *this;
 }
 
@@ -305,12 +271,7 @@ Polynomial &Polynomial::operator / (const double divider)
 
 Polynomial &Polynomial::operator *= (const double multiplier)
 {
-    auto iter = polynomial.begin();
-    for (; iter != polynomial.end(); ++iter)
-    {
-        if (iter -> second != 0) iter->second *= multiplier;
-    }
-
+    *this = *this * multiplier;
     return *this;
 }
 
@@ -318,13 +279,7 @@ Polynomial &Polynomial::operator *= (const double multiplier)
 
 Polynomial &Polynomial::operator /= (const double divider)
 {
-    assert(divider != 0 && "You're dividing by zero!");
-    auto iter = polynomial.begin();
-    for (; iter != polynomial.end(); ++iter)
-    {
-        if (iter -> second != 0) iter->second /= divider;
-    }
-
+    *this = *this / divider;
     return *this;
 }
 
@@ -368,47 +323,14 @@ Polynomial &Polynomial::operator * (const Polynomial &p)
 
 Polynomial &Polynomial::operator *= (const Polynomial &p)
 {
-    auto *result = new Polynomial();
-    std::pair<int, double> multiply;
-
-    auto iter_1 = this->polynomial.begin();
-    std::vector<std::pair<int, double> > pol1;
-
-    for (; iter_1 != this->polynomial.end(); ++iter_1)
-    {
-        pol1.emplace_back(iter_1->first, iter_1->second);
-    }
-
-    auto iter_2 = p.polynomial.begin();
-
-    std::vector<std::pair<int, double> > pol2;
-    for (; iter_2 != p.polynomial.end(); ++iter_2)
-    {
-        pol2.emplace_back(iter_2->first, iter_2->second);
-    }
-
-    for (auto &m: pol1)
-    {
-        for (auto &n: pol2)
-        {
-            multiply.first = m.first + n.first;
-            multiply.second = m.second * n.second;
-            result->polynomial[multiply.first] += multiply.second;
-        }
-    }
-
-    iter_1 = result->polynomial.end();
-    --iter_1;
-    result->deg = iter_1->first;
-    result->count = result->polynomial.size();
-    *this = *result;
-
+    *this = *this * p;
     return *this;
 }
 
 double Polynomial::operator [] (int i)
 {
     assert( (i + 1 <= count) && "i-number is greater than count of monomials!" );
+
     auto iter = polynomial.end();
     iter--;
     auto end = polynomial.begin();

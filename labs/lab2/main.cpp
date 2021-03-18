@@ -9,10 +9,9 @@ int main()
 
     Polynomial poly2(poly1);
 
-    poly1 *= poly2;
+    poly1 /= 0;
 
     std::cout << poly1;
-    std::cout << poly1[9];
 
     return 0;
 }
