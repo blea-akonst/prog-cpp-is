@@ -9,7 +9,7 @@ int main()
 
     Polynomial poly2(poly1);
 
-    poly1 /= 0;
+    poly1 *= poly2;
 
     std::cout << poly1;
 
