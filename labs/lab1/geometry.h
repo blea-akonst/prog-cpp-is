@@ -1,6 +1,8 @@
 #pragma once
+
 #include <iostream>
 #include <cmath>
+#include <utility>
 #include <vector>
 #include <cassert>
 
@@ -9,12 +11,12 @@ private:
     double x;
     double y;
 public:
-    explicit Point(double _x = 0, double _y = 0): // конструктор
+    explicit Point(double _x = 0, double _y = 0):
             x(_x), y(_y) {};
 
-    Point (const Point &point) = default; // конструктор копирования
+    Point (const Point &point) = default;
 
-    Point& operator= (const Point &point) = default; // перегрузка оператора присваивания
+    Point& operator= (const Point &point) = default;
 
     double getX() const { return x; }
     double getY() const { return y; }
@@ -27,30 +29,33 @@ public:
     }
 };
 
+struct Edge
+{
+    double module;
+    Point cords;
+};
+
 class Polyline
 {
 protected:
     std::vector<Point> vertices;
+    std::string type;
 public:
-    Polyline() = default;
-
-    explicit Polyline(const std::vector<Point> &points)
+    explicit Polyline(const std::vector<Point> &points, std::string type = "polyline"): type(std::move(type))
     {
         for (Point p: points)
             vertices.push_back(p);
     }
 
-    Polyline(const Point arr[], int size)
+    Polyline(const Point arr[], int size, std::string type = "polyline"): type(std::move(type))
     {
         for (int i = 0 ; i < size; i++)
             vertices.push_back(arr[i]);
     }
 
-    virtual Polyline& operator= (const std::vector<Point> &points)
+    Polyline& operator= (const Polyline& p)
     {
-        vertices.assign(points.size(), Point (0, 0));
-        for (Point u: points)
-            vertices.push_back(u);
+        this->vertices = p.vertices;
 
         return *this;
     }
@@ -62,7 +67,7 @@ public:
         return sqrt(x*x + y*y);
     }
 
-    virtual double getLength() const
+    double getLength() const
     {
         double length = 0;
         for (int i = 1; i < vertices.size(); i++)
@@ -70,23 +75,22 @@ public:
         return length;
     }
 
-    virtual void print () const
+    void printLine ()
     {
-        std::cout << "This polyline contains " << vertices.size() - 1 << " vertices with these cords: ";
-        for (Point p: vertices)
-            std::cout << "(" << p.getX() << "; " << p.getY() << ") ";
-        std::cout << ".\nLength of your polyline is: " << getLength() << ".\n\n";
+        std::cout << "This " << type << " contains " << vertices.size() - 1 << " vertices with these cords: ";
+        for (int i = 0; i < vertices.size() - 1; ++i)
+            std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
+        std::cout << ".\nLength of your " << type << " is: " << getLength() << ".\n\n";
     }
 };
 
 class ClosedPolyline: public Polyline
 {
 public:
-    ClosedPolyline() = default;
-    explicit ClosedPolyline(std::vector<Point> &arr): Polyline(arr)
+    explicit ClosedPolyline(std::vector<Point> &arr, std::string type = "closed polyline"): Polyline(arr, std::move(type))
     { assert(getClosed() && "Polyline isn't closed"); }
-    explicit ClosedPolyline(Point arr[], int size): Polyline(arr, size) { assert(getClosed() && "Polyline isn't closed"); }
-
+    explicit ClosedPolyline(Point arr[], int size, std::string type = "closed polyline"): Polyline(arr, size, std::move(type))
+    { assert(getClosed() && "Polyline isn't closed"); }
 
     bool getClosed() const
     {
@@ -94,34 +98,30 @@ public:
             return true;
         else return false;
     }
-
-    void print () const override
-    {
-        std::cout << "This closed polyline contains " << vertices.size() - 1 << " vertices with these cords: ";
-        for (int i = 0; i < vertices.size() - 1; i++)
-            std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
-        std::cout << ".\nLength of your closed polyline is: " << getLength() << ".\n\n";
-    }
 };
 
-class Polygon: public ClosedPolyline
+class Polygon: protected ClosedPolyline
 {
 protected:
-    struct Edge
-    {
-        double module;
-        Point cords;
-    };
     std::vector<Edge> edges;
     std::vector<double> angles;
 public:
-    Polygon(): ClosedPolyline() {}
+    explicit Polygon(std::vector<Point> &arr, std::string type = "polygon"): ClosedPolyline(arr, std::move(type))
+    { assert(getClosed() && "Part of the plane is not limited by a closed polyline");
+      assert(isConvex() && "Your polygon isn't convex!"); }
 
-    explicit Polygon(std::vector<Point> &arr): ClosedPolyline(arr)
-    { assert(getClosed() && "Part of the plane is not limited by a closed polyline"); }
+    explicit Polygon(Point arr[], int size, std::string type = "polygon"): ClosedPolyline(arr, size, std::move(type))
+    { assert(getClosed() && "Part of the plane is not limited by a closed polyline");
+      assert(isConvex() && "Your polygon isn't convex!"); }
 
-    explicit Polygon(Point arr[], int size): ClosedPolyline(arr, size)
-    { assert(getClosed() && "Part of the plane is not limited by a closed polyline"); }
+    Polygon& operator= (const Polygon& p)
+    {
+        this->vertices = p.vertices;
+        this->angles = p.angles;
+        this->edges = p.edges;
+
+        return *this;
+    }
 
     double scalarComposition(const Point &a, const Point &b)
     {
@@ -153,12 +153,12 @@ public:
         }
     }
 
-    virtual double getPerimeter() const
+    double getPerimeter() const
     {
         return ClosedPolyline::getLength();
     }
 
-    virtual double getArea() const
+    double getArea() const
     {
         double sum = 0;
 
@@ -170,25 +170,37 @@ public:
         return abs(sum) / 2;
     }
 
-    void print() const override
+    bool isConvex()
     {
-        std::cout << "This polygon contains " << vertices.size() - 1 << " vertices with these cords: ";
+        for (int i = 1; i < angles.size(); ++i)
+        {
+            if ( !( (sin(angles[i]) >= 0 && sin(angles[i - 1]) >= 0)
+                || (sin(angles[i]) < 0 && sin(angles[i - 1]) < 0) ) ) return false;
+            else continue;
+        }
+
+        return true;
+    }
+
+    void printPolygon()
+    {
+        std::cout << "This " << type << " contains " << vertices.size() - 1 << " vertices with these cords: ";
+
         for (int i = 0; i < vertices.size() - 1; i++)
             std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
-        std::cout << ".\nPerimeter of your polygon is: " << getPerimeter() << ".";
-        std::cout << "\nArea of your polygon is: " << getArea() << ".\n\n";
+
+        std::cout << ".\nPerimeter of your " << type << " is: " << getPerimeter() << ".";
+        std::cout << "\nArea of your " << type << " is: " << getArea() << ".\n\n";
     }
 };
 
 class RegularPolygon: public Polygon
 {
 public:
-    RegularPolygon(): Polygon() {}
-
-    explicit RegularPolygon(std::vector<Point> &arr): Polygon(arr)
+    explicit RegularPolygon(std::vector<Point> &arr, std::string type = "regular polygon"): Polygon(arr, std::move(type))
     { assert(checkRegular() && "Your polygon isn't regular!"); }
 
-    explicit RegularPolygon(Point arr[], int size): Polygon(arr, size)
+    explicit RegularPolygon(Point arr[], int size, std::string type = "regular polygon"): Polygon(arr, size, std::move(type))
     { assert(checkRegular() && "Your polygon isn't regular!"); }
 
     bool checkRegular()
@@ -211,22 +223,12 @@ public:
             }
         return flag;
     }
-
-    void print() const override
-    {
-        std::cout << "This regular polygon contains " << vertices.size() - 1 << " vertices with these cords: ";
-        for (int i = 0; i < vertices.size() - 1; i++)
-            std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
-        std::cout << ".\nPerimeter of your regular polygon is: " << getPerimeter() << ".";
-        std::cout << "\nArea of your regular polygon is: " << getArea() << ".\n\n";
-    }
 };
 
 class Triangle: public Polygon
 {
 public:
-    Triangle(): Polygon() {}
-    explicit Triangle(std::vector<Point> &arr): Polygon(arr)
+    explicit Triangle(std::vector<Point> &arr, std::string type = "triangle"): Polygon(arr, std::move(type))
     { assert(checkTriangle() && "Your polygon isn't a triangle!"); }
 
     bool checkTriangle()
@@ -243,23 +245,12 @@ public:
             return true;
         else return false;
     }
-
-    void print() const override
-    {
-        std::cout << "This triangle contains " << vertices.size() - 1 << " vertices with these cords: ";
-        for (int i = 0; i < vertices.size() - 1; i++)
-            std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
-        std::cout << ".\nPerimeter of your triangle is: " << getPerimeter() << ".";
-        std::cout << "\nArea of your triangle is: " << getArea() << ".\n\n";
-    }
-
 };
 
 class Trapezoid: public Polygon
 {
 public:
-    Trapezoid():Polygon() {}
-    explicit Trapezoid(std::vector<Point> &arr): Polygon(arr)
+    explicit Trapezoid(std::vector<Point> &arr, std::string type = "trapezoid"): Polygon(arr, std::move(type))
     { assert(trapezoidCheck() && "Your polygon isn't a trapezoid!"); }
 
     bool trapezoidCheck()
@@ -275,13 +266,5 @@ public:
 
         return false;
     }
-
-    void print() const override
-    {
-        std::cout << "This trapezoid contains " << vertices.size() - 1 << " vertices with these cords: ";
-        for (int i = 0; i < vertices.size() - 1; i++)
-            std::cout << "(" << vertices[i].getX() << "; " << vertices[i].getY() << ") ";
-        std::cout << ".\nPerimeter of your trapezoid is: " << getPerimeter() << ".";
-        std::cout << "\nArea of your trapezoid is: " << getArea() << ".\n\n";
-    }
 };
+

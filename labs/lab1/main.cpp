@@ -9,16 +9,16 @@ int main()
     std::vector<Point> array { Point (0,0), Point(0, 4), Point(3, 4), Point(3, 0), Point (0, 0) };
 
     Polyline polyline(array);
-    polyline.print();
+    polyline.printLine();
 
     ClosedPolyline closed(array);
-    closed.print();
+    closed.printLine();
 
     Polygon polygon1(array);
-    polygon1.print();
+    polygon1.printPolygon();
 
     Trapezoid trapezoid(array);
-    trapezoid.print();
+    trapezoid.printPolygon();
 
     return 0;
 }
