@@ -10,7 +10,7 @@ class Polynomial
 {
 private:
     std::unordered_map<int, double> polynomial; // хеш-таблица степень - коэф
-    unsigned int deg; // степень полинома
+    int deg; // степень полинома
 public:
     Polynomial(): deg(0) {};
     Polynomial(const Polynomial &);
@@ -18,25 +18,25 @@ public:
 
     Polynomial &operator = (const Polynomial &);
 
-    friend bool operator == (const Polynomial &, const Polynomial &);
-    friend bool operator != (const Polynomial &, const Polynomial &);
+    bool operator == (const Polynomial &) const;
+    bool operator != (const Polynomial &) const;
 
-    Polynomial operator + (const Polynomial &); // бинарный плюс
-    Polynomial operator - (const Polynomial &); // бинарный минус
-    Polynomial operator - (); // унарный минус
+    Polynomial operator + (const Polynomial &) const; // бинарный плюс
+    Polynomial operator - (const Polynomial &) const; // бинарный минус
+    Polynomial operator - () const; // унарный минус
     Polynomial &operator += (const Polynomial &);
     Polynomial &operator -= (const Polynomial &);
 
-    Polynomial operator * (double);
-    Polynomial operator * (const Polynomial &);
-    Polynomial operator / (double);
+    Polynomial operator * (double) const;
+    Polynomial operator * (const Polynomial &) const;
+    Polynomial operator / (double) const;
     Polynomial &operator *= (double);
     Polynomial &operator *= (const Polynomial &);
     Polynomial &operator /= (double);
 
     friend std::istream &operator >> (std::istream &, Polynomial &);
     friend std::ostream &operator << (std::ostream &, Polynomial &);
-    double operator [] (int);
+    double &operator [] (int); // константным не совсем получилось ( : для этого нужна конст мапа (а это нам не надо)
 };
 
 std::istream& operator >> (std::istream &in, Polynomial &p)
@@ -53,7 +53,7 @@ std::istream& operator >> (std::istream &in, Polynomial &p)
 
     for (int i = 0; i < count; ++i)
     {
-        unsigned int cur_deg;
+        int cur_deg;
         double coeff;
 
         std::cout << "\nEnter the " << i + 1 << " monomial's degree: ";
@@ -132,16 +132,16 @@ Polynomial::Polynomial(const Polynomial &f)
 
 Polynomial &Polynomial::operator= (const Polynomial &f) = default;
 
-bool operator==(const Polynomial &p1, const Polynomial &p2)
+bool Polynomial::operator==(const Polynomial &p) const
 {
-    if (p1.polynomial == p2.polynomial)
+    if (this->polynomial == p.polynomial)
         return true;
     else return false;
 }
 
-bool operator != (const Polynomial &p1, const Polynomial &p2)
+bool Polynomial::operator != (const Polynomial &p) const
 {
-    return (!(p1 == p2));
+    return (!(*this == p));
 }
 
 Polynomial &Polynomial::operator -= (const Polynomial &p)
@@ -166,21 +166,21 @@ Polynomial &Polynomial::operator += (const Polynomial &p)
     return *this;
 }
 
-Polynomial Polynomial::operator + (const Polynomial &right)
+Polynomial Polynomial::operator + (const Polynomial &right) const
 {
     Polynomial result(*this);
     result += right;
     return result;
 }
 
-Polynomial Polynomial::operator - (const Polynomial &right)
+Polynomial Polynomial::operator - (const Polynomial &right) const
 {
     Polynomial result(*this);
     result += right;
     return result;
 }
 
-Polynomial Polynomial::operator - ()
+Polynomial Polynomial::operator - () const
 {
     Polynomial result (*this);
 
@@ -217,7 +217,7 @@ Polynomial &Polynomial::operator /= (const double divider)
     return *this;
 }
 
-Polynomial Polynomial::operator * (const double multiplier)
+Polynomial Polynomial::operator * (const double multiplier) const
 {
     Polynomial result(*this);
     result *= multiplier;
@@ -225,7 +225,7 @@ Polynomial Polynomial::operator * (const double multiplier)
 }
 
 
-Polynomial Polynomial::operator / (const double divider)
+Polynomial Polynomial::operator / (const double divider) const
 {
     Polynomial result(*this);
     result *= divider;
@@ -236,32 +236,30 @@ Polynomial &Polynomial::operator *= (const Polynomial &p)
 {
     std::pair<int, double> multiply;
 
-    auto result = new Polynomial();
-    result->deg = 0;
+    Polynomial result;
 
     for (auto const &x: this->polynomial)
         for (auto const &y: p.polynomial)
         {
             multiply.first = x.first + y.first;
             multiply.second = x.second * y.second;
-            result->polynomial[multiply.first] += multiply.second;
-            if (result->deg < multiply.first) result->deg = multiply.first;
+            result.polynomial[multiply.first] += multiply.second;
+            if (result.deg < multiply.first) result.deg = multiply.first;
         }
 
-    *this = *result;
-    delete result;
+    *this = result;
 
     return *this;
 }
 
-Polynomial Polynomial::operator * (const Polynomial &p)
+Polynomial Polynomial::operator * (const Polynomial &p) const
 {
     Polynomial result(*this);
     result *= p;
     return result;
 }
 
-double Polynomial::operator [] (int i)
+double &Polynomial::operator [] (const int i)
 {
-    return polynomial[i];
+    return polynomial[i - 1];
 }
