@@ -11,9 +11,8 @@ class Polynomial
 private:
     std::unordered_map<int, double> polynomial; // хеш-таблица степень - коэф
     unsigned int deg; // степень полинома
-    unsigned int count; // количество одночленов
 public:
-    Polynomial(): deg(0), count(0) {};
+    Polynomial(): deg(0) {};
     Polynomial(const Polynomial &);
     ~Polynomial() = default;
 
@@ -22,15 +21,15 @@ public:
     friend bool operator == (const Polynomial &, const Polynomial &);
     friend bool operator != (const Polynomial &, const Polynomial &);
 
-    Polynomial &operator + (const Polynomial &); // бинарный плюс
-    Polynomial &operator - (const Polynomial &); // бинарный минус
-    Polynomial &operator - (); // унарный минус
+    Polynomial operator + (const Polynomial &); // бинарный плюс
+    Polynomial operator - (const Polynomial &); // бинарный минус
+    Polynomial operator - (); // унарный минус
     Polynomial &operator += (const Polynomial &);
     Polynomial &operator -= (const Polynomial &);
 
-    Polynomial &operator * (double);
-    Polynomial &operator * (const Polynomial &);
-    Polynomial &operator / (double);
+    Polynomial operator * (double);
+    Polynomial operator * (const Polynomial &);
+    Polynomial operator / (double);
     Polynomial &operator *= (double);
     Polynomial &operator *= (const Polynomial &);
     Polynomial &operator /= (double);
@@ -68,7 +67,6 @@ std::istream& operator >> (std::istream &in, Polynomial &p)
         if (p.polynomial[cur_deg] == 0)
         {
             p.polynomial[cur_deg] = coeff;
-            ++p.count;
         }
         else
         {
@@ -83,7 +81,7 @@ std::istream& operator >> (std::istream &in, Polynomial &p)
 
 std::ostream& operator << (std::ostream &out, Polynomial &p)
 {
-    out << "\nThe count of monomials of your polynomial: " << p.count << "\n";
+    out << "\nThe count of monomials of your polynomial: " << p.polynomial.size() << "\n";
     out << "The degree of your polynomial: " << p.deg << "\n";
 
     std::vector<std::pair<int, double> > monomials;
@@ -129,7 +127,6 @@ std::ostream& operator << (std::ostream &out, Polynomial &p)
 Polynomial::Polynomial(const Polynomial &f)
 {
     deg = f.deg;
-    count = f.count;
     polynomial = f.polynomial;
 }
 
@@ -149,66 +146,50 @@ bool operator != (const Polynomial &p1, const Polynomial &p2)
 
 Polynomial &Polynomial::operator -= (const Polynomial &p)
 {
-    auto iter = p.polynomial.begin();
-    unsigned int cur_deg = this->deg;
-    for (; iter != p.polynomial.end(); ++iter)
+    for (auto const &monom_sec: p.polynomial)
     {
-        auto iter_2 = this->polynomial.find(iter->first);
-        if (iter_2 == p.polynomial.end())
-        {
-            this->polynomial[iter->first] = -(iter->second);
-            if (iter->first > this->deg) this->deg = iter->first;
-        }
-        else if (iter->first == iter_2->first)
-            this->polynomial[iter->first] = iter_2->second - iter->second;
-        if (iter->first > cur_deg) cur_deg = iter->first;
+        this->polynomial[monom_sec.first] -= monom_sec.second;
+        if (this->deg < monom_sec.first) this->deg = monom_sec.first;
     }
-    this->count = this->polynomial.size();
 
     return *this;
 }
 
 Polynomial &Polynomial::operator += (const Polynomial &p)
 {
-    auto iter = p.polynomial.begin();
-    unsigned int cur_deg = this->deg;
-    for (; iter != p.polynomial.end(); ++iter)
+    for (auto const &monom_sec: p.polynomial)
     {
-        auto iter_2 = this->polynomial.find(iter->first);
-        if (iter_2 == p.polynomial.end())
-        {
-            this->polynomial[iter->first] = iter->second;
-            if (iter->first > this->deg) this->deg = iter->first;
-        }
-        else if (iter->first == iter_2->first)
-            this->polynomial[iter->first] = iter_2->second + iter->second;
-        if (iter->first > cur_deg) cur_deg = iter->first;
-    }
-    this->count = this->polynomial.size();
-
-    return *this;
-}
-
-Polynomial &Polynomial::operator + (const Polynomial &right)
-{
-    return *this += right;
-}
-
-Polynomial &Polynomial::operator - (const Polynomial &right)
-{
-    return *this -= right;
-}
-
-Polynomial &Polynomial::operator - ()
-{
-    auto iter = polynomial.begin();
-
-    for (; iter != polynomial.end(); ++iter)
-    {
-        this->polynomial[iter->first] = -(iter->second);
+        this->polynomial[monom_sec.first] += monom_sec.second;
+        if (this->deg < monom_sec.first) this->deg = monom_sec.first;
     }
 
     return *this;
+}
+
+Polynomial Polynomial::operator + (const Polynomial &right)
+{
+    Polynomial result(*this);
+    result += right;
+    return result;
+}
+
+Polynomial Polynomial::operator - (const Polynomial &right)
+{
+    Polynomial result(*this);
+    result += right;
+    return result;
+}
+
+Polynomial Polynomial::operator - ()
+{
+    Polynomial result (*this);
+
+    for (auto &monom: result.polynomial)
+    {
+        monom.second = -(monom.second);
+    }
+
+    return result;
 }
 
 
@@ -219,7 +200,6 @@ Polynomial &Polynomial::operator *= (const double multiplier)
         this->polynomial.clear();
         this->polynomial[0] = 0;
         this->deg = 1;
-        this->count = 1;
     }
     else for (auto &x: this->polynomial)
             if (x.second != 0) x.second *= multiplier;
@@ -237,15 +217,19 @@ Polynomial &Polynomial::operator /= (const double divider)
     return *this;
 }
 
-Polynomial &Polynomial::operator * (const double multiplier)
+Polynomial Polynomial::operator * (const double multiplier)
 {
-    return *this *= multiplier;
+    Polynomial result(*this);
+    result *= multiplier;
+    return result;
 }
 
 
-Polynomial &Polynomial::operator / (const double divider)
+Polynomial Polynomial::operator / (const double divider)
 {
-    return *this /= divider;
+    Polynomial result(*this);
+    result *= divider;
+    return result;
 }
 
 Polynomial &Polynomial::operator *= (const Polynomial &p)
@@ -255,8 +239,8 @@ Polynomial &Polynomial::operator *= (const Polynomial &p)
     auto result = new Polynomial();
     result->deg = 0;
 
-    for (auto &x: this->polynomial)
-        for (auto &y: p.polynomial)
+    for (auto const &x: this->polynomial)
+        for (auto const &y: p.polynomial)
         {
             multiply.first = x.first + y.first;
             multiply.second = x.second * y.second;
@@ -264,17 +248,17 @@ Polynomial &Polynomial::operator *= (const Polynomial &p)
             if (result->deg < multiply.first) result->deg = multiply.first;
         }
 
-    result->count = result->polynomial.size();
-
     *this = *result;
     delete result;
 
     return *this;
 }
 
-Polynomial &Polynomial::operator * (const Polynomial &p)
+Polynomial Polynomial::operator * (const Polynomial &p)
 {
-    return *this *= p;
+    Polynomial result(*this);
+    result *= p;
+    return result;
 }
 
 double Polynomial::operator [] (int i)
