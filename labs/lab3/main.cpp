@@ -5,6 +5,8 @@
 #include <cstring>
 #include "pugi/src/pugixml.cpp" // с заголовочником линковщик плачет
 
+enum errors { NO_ERRORS, ARG_ERROR, INCORRECT_ARG };
+
 const double earth_radius = 6371; // радиус Земли в километрах
 const double INF = 1e5; // "бесконечность" для алгоритма Прима
 
@@ -214,7 +216,7 @@ int main(int argc, char *argv[])
     if (argc != 2)
     {
         std::cout << "Enter the task number (1st, 2nd or 3rt) by command prompt argument!" << "\n";
-        exit(2);
+        return ARG_ERROR;
     }
 
     transport.open_xml();
@@ -224,17 +226,15 @@ int main(int argc, char *argv[])
     {
         case 'f':
             transport.solve_first();
-            break;
+            return NO_ERRORS;
         case 's':
             transport.solve_second();
-            break;
+            return NO_ERRORS;
         case 't':
             transport.solve_third();
-            break;
+            return NO_ERRORS;
         default:
             std::cout << "CMD argument error";
-            return 3;
+            return INCORRECT_ARG;
     }
-
-    return 0;
 }
