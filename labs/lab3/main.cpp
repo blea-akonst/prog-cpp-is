@@ -1,9 +1,11 @@
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <cmath>
-#include <cstring>
-#include "pugi/src/pugixml.cpp" // с заголовочником линковщик плачет
+#include <string>
+#include <sstream>
+#include <codecvt>
+#include "pugi/src/pugixml.hpp"
 
 enum errors { NO_ERRORS, ARG_ERROR, INCORRECT_ARG };
 
@@ -12,7 +14,7 @@ const double INF = 1e5; // "бесконечность" для алгоритм�
 
 typedef std::pair<double, double> cords; // координаты остановки
 typedef std::vector<cords> transport; // вектор остановок для каждого маршрута
-typedef std::map<std::string, transport> route_stops; // мапа "номер машрута - вектор с маршрутом"
+typedef std::unordered_map<std::wstring, transport> route_stops; // мапа "номер машрута - вектор с маршрутом"
 typedef struct { unsigned bus, troll, tram; } stops_on_street; // счетчики остановок по видам транспорта
 
 /* вычисление расстояния между точками на Земле по формуле Гаверсинуса */
@@ -24,6 +26,8 @@ double gaversinus(double lat1, double lon1, double lat2, double lon2)
     double res = sin(lat/2) * sin(lat/2) + cos(lat1*(M_PI/180)) * cos(lat2*(M_PI/180)) * sin(lon/2) * sin(lon/2);
     return 2 * earth_radius * atan2(sqrt(res), sqrt(1-res));
 }
+
+/* алгоритм Прима для нахождения минимального остовного дерева (для подсчета длины маршрутов) */
 
 double primMST(size_t v_count, const transport &stops_cords)
 {
@@ -63,8 +67,8 @@ double primMST(size_t v_count, const transport &stops_cords)
 class Data
 {
 private:
-    std::map<std::string, route_stops> routes_info; // unordered_map не вышел
-    std::map<std::string, stops_on_street> streets; // - влезает не больше (2^8 - 1) эл-тов
+    std::unordered_map<std::wstring, route_stops> routes_info; // unordered_map не вышел
+    std::unordered_map<std::wstring, stops_on_street> streets; // - влезает не больше (2^8 - 1) эл-тов
     pugi::xml_document transport_doc; // док
     pugi::xml_node root; // корень (dataset)
 public:
@@ -73,7 +77,16 @@ public:
     void solve_first() const;
     void solve_second() const;
     void solve_third() const;
+    
+    /* Перегрузка для корректного вывода Юникода, позволяющая нам обойтись даже без std::wcout */
+    friend std::ostream& operator<<(std::ostream&, const std::wstring&);
 };
+
+std::ostream& operator<<(std::ostream& stream, const std::wstring& str) {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    stream << conv.to_bytes(str);
+    return stream;
+}
 
 void Data::open_xml()
 {
@@ -81,58 +94,60 @@ void Data::open_xml()
     pugi::xml_parse_result result = transport_doc.load_file("data.xml");
 
     std::cout << "XML file open attempt: " << result.description() << "\n\n";
-    root = transport_doc.child("dataset");
+    root = transport_doc.child(L"dataset");
 }
 
 void Data::parse()
 {
+    std::wstring type, routes, coordinates, buf, location;
+    std::wstringstream ss; // поток под все, кроме кириллических строк
+    cords cur_cords;
+
     for (pugi::xml_node &node: root.children())
     {
-        std::string type, location, routes, coordinates;
-
         /* качаем нужные нам данные из файла (тип транспорта, улицу, маршруты и координаты остановки) */
 
-        type = node.child("type_of_vehicle").text().as_string();
-        location = node.child("location").text().as_string();
-        routes = node.child("routes").text().as_string();
-        coordinates = node.child("coordinates").text().as_string();
+        type = node.child(L"type_of_vehicle").text().as_string();
+        location = node.child(L"location").text().as_string();
+        routes = node.child(L"routes").text().as_string();
+        coordinates = node.child(L"coordinates").text().as_string();
 
         /* распихиваем координаты остановок по маршрутам, а для улиц прибавляем счетчики остановок
          * по каждому виду транспорта */
 
-        std::string cur_location;
-        cords cur_cords;
+        std::replace(coordinates.begin(), coordinates.end(), ',', ' '); // делаем между коорд. пробел
 
-        char* cords_ptr = const_cast<char *>(coordinates.data());
-        char* div_cords = strtok(cords_ptr, ",");
-        cur_cords.first = atof(div_cords);
-        div_cords = strtok(nullptr, ",");
-        cur_cords.second = atof(div_cords);
+        ss.str(coordinates); // зачисляем координаты из строкового потока
+        ss >> cur_cords.first;
+        ss >> cur_cords.second;
 
-        char* routes_ptr = const_cast<char *>(routes.data());
-        char* div_routes = strtok(routes_ptr, ",.");
+        ss.clear();
+        ss.str(routes);
 
-        while (div_routes != nullptr)
+        if (std::count(routes.begin(), routes.end(), L',') > 0)
         {
-            routes_info[type][div_routes].push_back(cur_cords);
-            div_routes = strtok(nullptr, ".,");
+            while (std::getline(ss, buf, L','))
+                routes_info[type][buf].push_back(cur_cords);
+        }
+        else
+        {
+            while (std::getline(ss, buf, L'.'))
+                routes_info[type][buf].push_back(cur_cords);
         }
 
-        char* location_ptr = const_cast<char *>(location.data());
-        char* div_location = strtok(location_ptr, ",");
+        ss.clear();
+        ss.str(location);
 
-        while (div_location != nullptr)
+        while (std::getline(ss, buf, L','))
         {
-            cur_location = div_location;
-            if (cur_location[0] == ' ')
-                cur_location.erase(0, 1);
+            if (buf[0] == ' ') buf.erase(0, 1);
 
-            if (type == "Bus") ++streets[cur_location].bus;
-            else if (type == "Tram") ++streets[cur_location].tram;
-            else ++streets[cur_location].troll;
-
-            div_location = strtok(nullptr, ",");
+            if (type == L"Bus") ++streets[buf].bus;
+            else if (type == L"Tram") ++streets[buf].tram;
+            else ++streets[buf].troll;
         }
+
+        ss.clear();
     }
 
     std::cout << "Parsed successfully!\n\n";
@@ -142,7 +157,7 @@ void Data::solve_first() const
 {
     std::cout << "Routes with the most stops (one way):" << "\n";
 
-    std::pair<std::string, unsigned> max_route_size;
+    std::pair<std::wstring, unsigned> max_route_size;
 
     for (auto const &veh_type: routes_info)
     {
@@ -151,9 +166,10 @@ void Data::solve_first() const
             unsigned cur_size = route.second.size();
             if (cur_size > max_route_size.second) max_route_size = std::make_pair(route.first, cur_size);
         }
-        std::cout << veh_type.first << ": route " << max_route_size.first << ", approximately " << max_route_size.second / 2
-                  << " stops." << "\n";
-        max_route_size = std::make_pair(0, 0);
+        std::cout << veh_type.first << ": route " << max_route_size.first
+                  << ", approximately " << max_route_size.second / 2 << " stops." << "\n";
+
+        max_route_size.second = 0;
     }
 
     std::cout << "\n";
@@ -163,13 +179,16 @@ void Data::solve_second() const
 {
     std::cout << "The longest routes (by distance):\n";
 
-    std::pair<std::string, double> longest;
+    std::pair<std::wstring, double> longest;
 
     /* для подсчета длины маршрута проходим по остановкам каждого маршрута алгоритмом Прима,
      * в данном случае выбрана реализация за O(N^2), поскольку является
      * наиболее подходящей для полных графов и решения евклидовой задачи (правда, вместо декартовой системы
      * мы имеем координаты остановок на земле, а полный граф нам приходится использовать вследствие
-     * невозможности установить последовательность остановок по данному датасету) */
+     * невозможности установить последовательность остановок по данному датасету).
+     * алгоритм, рассматривая наш граф, будет брать минимально возможные ребра в остов
+     * что в большинстве случаев будет похоже на расстояние между соседними остановками, следовательно,
+     * MST и будет длиной нашего маршрута */
 
     for (auto &veh_type: routes_info)
     {
@@ -179,8 +198,9 @@ void Data::solve_second() const
             if (cur_length > longest.second) { longest = std::make_pair(route.first, cur_length); }
         }
 
-        std::cout << veh_type.first << ": route " << longest.first << ", approximately " << longest.second
-                  << " km." << "\n";
+        std::cout << veh_type.first << ": route " << longest.first
+                  << ", approximately " << longest.second << " km." << "\n";
+
         longest.second = 0;
     }
 
@@ -189,7 +209,7 @@ void Data::solve_second() const
 
 void Data::solve_third() const
 {
-    std::pair<std::string, unsigned> maximum{"", 0};
+    std::pair<std::wstring, unsigned> maximum;
 
     /* тут мы тупо работаем с получившимися счетчиками для каждой из улиц */
 
@@ -200,6 +220,7 @@ void Data::solve_third() const
     }
 
     std::cout << "Street with the maximum number of stops (in two directions): " << maximum.first << "\n";
+
     std::cout << "Total number of stops: " << maximum.second << "\n";
 
     std::cout << "Number of stops by type of transport: \n";
