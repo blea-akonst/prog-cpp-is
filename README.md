@@ -6,7 +6,7 @@
 
 [__Лабораторная работа 3: Анализ данных__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab3)
 
-[__Лабораторная работа 4: STL. Алгоритмы. Итераторы (*in the process..*)__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab4)
+[__Лабораторная работа 4: STL. Алгоритмы. Итераторы__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab4)
 
 [__Лабораторная работа 5: STL. Контейнеры (*in the process..*)__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab5)
 
