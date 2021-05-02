@@ -68,7 +68,7 @@ namespace lab
     }
 
     template <typename T, typename P>
-    bool is_partitioned(const T& begin, const T& end, P comp)
+    bool is_partitioned(const T& begin, const T& end, P predicate)
     {
         T iterator = begin;
 
@@ -135,7 +135,6 @@ int main()
     // lab::any_of(test.begin(), test.end(), [](int i) { return i < 0; }) ? std::cout << "true" : std::cout << "false";
     // lab::one_of(test.begin(), test.end(), [](int i) { return i < 0; }) ? std::cout << "true" : std::cout << "false";
     // lab::is_sorted(test.begin(), test.end(), [](int i, int j) { return i < j; }) ? std::cout << "true" : std::cout << "false";
-
     // lab::is_palindrome(test.begin(), test.end()) ? std::cout << "true" : std::cout << "false";
 
     return 0;
