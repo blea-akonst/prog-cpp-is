@@ -45,13 +45,14 @@ namespace lab
         T iterator = begin;
 
         while (++iterator != end)
+        {
             if (predicate(*iterator))
                 ++count;
+            if (count > 1)
+                return false;
+        }
 
-        if (count == 1)
-            return true;
-        else
-            return false;
+        return true;
     }
 
     template <typename T, typename P>
@@ -67,8 +68,8 @@ namespace lab
         return true;
     }
 
-    template <typename T, typename P>
-    bool is_partitioned(const T& begin, const T& end, P predicate)
+    template <typename T>
+    bool is_partitioned(const T& begin, const T& end)
     {
         T iterator = begin;
 
@@ -107,23 +108,17 @@ namespace lab
     template <typename T>
     bool is_palindrome(const T& begin, const T& end)
     {
-        if (std::distance(begin, end) % 2 == 0)
-            return false;
-
         T start = begin, finish = end - 1;
-        bool flag = false;
 
         while (start != finish)
         {
-            if (*start == *finish)
-                flag = true;
-            else
+            if (*start != *finish)
                 return false;
             ++start;
             --finish;
         }
 
-        return flag;
+        return true;
     }
 }
 
