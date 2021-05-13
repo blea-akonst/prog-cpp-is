@@ -1,7 +1,10 @@
 #include <iostream>
+#include <memory>
+#include "circular_buffer.h"
 
 int main()
 {
-  std::cout << "Здесь должна быть лаба..." << "\n";
-  return 0;
+    std::cout << "еще ничего не готово...";
+
+    return 0;
 }
