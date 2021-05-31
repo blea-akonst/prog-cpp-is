@@ -24,9 +24,6 @@ public:
         explicit CIterator(T* p): iterator(p) {}
         CIterator(const CIterator& other): iterator(other.iterator) {}
 
-        bool operator==(CIterator const& other) { return iterator == other.iterator; }
-        bool operator!=(CIterator const& other) { return iterator != other.iterator; }
-
         using type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;
 
         typename CIterator::reference operator*() const { return *iterator; }
@@ -80,17 +77,19 @@ public:
         inline bool operator<(const CIterator &other) const { return iterator < other.iterator; }
         inline bool operator>=(const CIterator &other) const { return iterator >= other.iterator; }
         inline bool operator<=(const CIterator &other) const { return iterator <= other.iterator; }
+        inline bool operator==(CIterator const& other) { return iterator == other.iterator; }
+        inline bool operator!=(CIterator const& other) { return iterator != other.iterator; }
     };
 
     using traits_t = std::allocator_traits<decltype(alloc_)>;
 
-    CircularBuffer(): capacity_(0), count_(0) {}                                    // constructor
+    CircularBuffer(): capacity_(0), count_(0) {}
 
-    CircularBuffer(size_t cap):          capacity_(cap),                            // constructor with capacity
+    CircularBuffer(size_t cap):          capacity_(cap),
                                          count_(0),
                                          data_(traits_t::allocate(alloc_, cap)) {}
 
-    CircularBuffer(const CircularBuffer<T>& another)                                // copy constructor
+    CircularBuffer(const CircularBuffer<T>& another)
     {
         data_ = traits_t::allocate(alloc_, another.capacity_);
         count_ = another.count_;
@@ -101,7 +100,7 @@ public:
         return *this;
     }
 
-    ~CircularBuffer() { traits_t::deallocate(alloc_, data_, capacity_); data_ = nullptr; }     // destructor
+    ~CircularBuffer() { traits_t::deallocate(alloc_, data_, capacity_); data_ = nullptr; }
 
     void push_back(T);
     void push_front(T);
@@ -170,9 +169,9 @@ void CircularBuffer<T>::pop_back()
 {
     if (count_ > 1)
     {
-        current = end() - 1;
-        *current = reinterpret_cast<T>(0);
-        --current;
+        auto iter = end() - 1;
+        while (!reinterpret_cast<int>(*iter)) --iter;
+        *iter = 0;
     }
     else if (count_)
         traits_t::deallocate(alloc_, data_, capacity_);
@@ -187,8 +186,6 @@ void CircularBuffer<T>::push_front(T element)
 {
     if (!capacity_)
         ZERO_CAPACITY;
-
-    auto iter = end() - 1;
 
     for (size_t i = capacity_ - 1; i > 0; --i)
         data_[i] = data_[i - 1];
@@ -205,7 +202,7 @@ void CircularBuffer<T>::pop_front()
     if (count_ > 1)
     {
         auto iter = begin();
-        while (reinterpret_cast<int>(*iter) == 0) ++iter;
+        while (!reinterpret_cast<int>(*iter)) ++iter;
         *iter = 0;
     }
     else if (count_)
