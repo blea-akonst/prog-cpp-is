@@ -10,4 +10,4 @@
 
 [__Лабораторная работа 5: STL. Контейнеры__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab5)
 
-[__Лабораторная работа 6: Кубик Рубика (*in the process..*)__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab6)
+[__Лабораторная работа 6: Кубик Рубика__](https://github.com/blea-akonst/prog-cpp-IS/tree/main/labs/lab6)
