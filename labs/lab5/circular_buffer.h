@@ -21,7 +21,7 @@ public:
 
     CircularBuffer(): capacity_(0), count_(0) {}
 
-    explicit CircularBuffer(size_t cap):          capacity_(cap),
+    explicit CircularBuffer(size_t cap): capacity_(cap),
                                          count_(0),
                                          data_(traits_t::allocate(alloc_, cap)) {}
 
@@ -31,7 +31,7 @@ public:
         count_ = another.count_;
         capacity_ = another.capacity_;
 
-        std::copy(another.begin, another.end, begin());
+        std::copy(another.begin(), another.end(), begin());
 
         return *this;
     }
@@ -49,12 +49,12 @@ public:
     T& operator[] (size_t);
 
     typedef CIterator<T> iterator;
-    typedef CIterator<const T> const_iterator;
+    typedef CIteratorConst<T> const_iterator;
 
-    iterator begin() { return iterator(data_); }            // это надо для взаимодействия с стл-алгосами (вроде как)
-    iterator end() { return iterator(data_ + capacity_); }  // плюс я хочу выводить весь буфер через итераторы простым действием
-    iterator head = begin();                                // поэтому я хочу 4 итератора
-    iterator tail = begin();                                // современные компьютеры не пострадают
+    iterator begin() { return iterator(data_); }
+    iterator end() { return iterator(data_ + capacity_); }
+    iterator head = begin();
+    iterator tail = begin();
 
     const_iterator begin() const { return const_iterator(data_); }
     const_iterator end() const { return const_iterator(data_ + capacity_); }
@@ -71,14 +71,14 @@ void CircularBuffer<T>::print()
         std::cout << "Your circular buffer capacity: " << capacity_ << "." << "\n";
         std::cout << "Your circular buffer contains these elements: " << "\n";
 
-        auto from = begin();
+        auto iter = begin();
         size_t i = 0;
 
-        while (from != end() && i != count_)
+        while (iter != end() && i != count_)
         {
-            std::cout << "[" << i + 1 << "] element" << ": " << *from << "\n";
+            std::cout << "[" << i + 1 << "] element" << ": " << *iter << "\n";
             ++i;
-            ++from;
+            ++iter;
         }
         std::cout << "\n";
     }
