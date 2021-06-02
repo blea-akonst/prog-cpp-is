@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include <algorithm>
+#include "cbuffer_iterators.h"
 
 #define ZERO_CAPACITY std::cerr << "You can't add an element to buffer with zero capacity! Expand the capacity!"
 #define EMPTY std::cerr << "Buffer is empty!"
@@ -16,76 +17,11 @@ private:
     std::allocator<T> alloc_;
     T* data_;
 public:
-    class CIterator: public std::iterator<std::random_access_iterator_tag, T>
-    {
-    private:
-        T* iterator;
-    public:
-        explicit CIterator(T* p): iterator(p) {}
-        CIterator(const CIterator& other): iterator(other.iterator) {}
-
-        using type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;
-
-        typename CIterator::reference operator*() const { return *iterator; }
-        inline type operator-(const CIterator &it) const { return iterator - it.iterator; }
-        inline CIterator operator+(type it) const { return CIterator(iterator + it); }
-        inline CIterator operator-(type it) const { return CIterator(iterator - it); }
-        friend inline CIterator operator+(type left, const CIterator &right) { return CIterator(left + right.iterator); }
-        friend inline CIterator operator-(type left, const CIterator &right) { return CIterator(left - right.iterator); }
-
-        inline CIterator &operator+=(type it)
-        {
-            iterator += it;
-            return *this;
-        }
-
-        inline CIterator &operator-=(type it)
-        {
-            iterator -= it;
-            return *this;
-        }
-
-        inline CIterator &operator++()
-        {
-            ++iterator;
-            return *this;
-        }
-
-        inline CIterator &operator--()
-        {
-            --iterator;
-            return *this;
-        }
-
-        inline CIterator operator++(int)
-        {
-            CIterator temp(*this);
-            ++iterator;
-            return temp;
-        }
-
-        inline CIterator operator--(int)
-        {
-            CIterator temp(*this);
-            --iterator;
-            return temp;
-        }
-
-        inline T *operator->() const { return iterator; }
-        inline T &operator[](type i) const { return iterator[i]; }
-        inline bool operator>(const CIterator &other) const { return iterator > other.iterator; }
-        inline bool operator<(const CIterator &other) const { return iterator < other.iterator; }
-        inline bool operator>=(const CIterator &other) const { return iterator >= other.iterator; }
-        inline bool operator<=(const CIterator &other) const { return iterator <= other.iterator; }
-        inline bool operator==(CIterator const& other) { return iterator == other.iterator; }
-        inline bool operator!=(CIterator const& other) { return iterator != other.iterator; }
-    };
-
     using traits_t = std::allocator_traits<decltype(alloc_)>;
 
     CircularBuffer(): capacity_(0), count_(0) {}
 
-    CircularBuffer(size_t cap):          capacity_(cap),
+    explicit CircularBuffer(size_t cap):          capacity_(cap),
                                          count_(0),
                                          data_(traits_t::allocate(alloc_, cap)) {}
 
@@ -100,30 +36,32 @@ public:
         return *this;
     }
 
-    ~CircularBuffer() { traits_t::deallocate(alloc_, data_, capacity_); data_ = nullptr; }
+    ~CircularBuffer() { traits_t::deallocate(alloc_, data_, capacity_);
+                        traits_t::destroy(alloc_, data_);               }
 
     void push_back(T);
     void push_front(T);
     void pop_back();
     void pop_front();
     void new_capacity(size_t);
-    void print() const;
+    void print();
 
     T& operator[] (size_t);
 
-    typedef CIterator iterator;
-    typedef CIterator const const_iterator;
+    typedef CIterator<T> iterator;
+    typedef CIterator<const T> const_iterator;
 
-    iterator begin() { return iterator(data_); }
-    iterator end() { return iterator(data_ + capacity_); }
-    iterator current = begin();
+    iterator begin() { return iterator(data_); }            // это надо для взаимодействия с стл-алгосами (вроде как)
+    iterator end() { return iterator(data_ + capacity_); }  // плюс я хочу выводить весь буфер через итераторы простым действием
+    iterator head = begin();                                // поэтому я хочу 4 итератора
+    iterator tail = begin();                                // современные компьютеры не пострадают
 
     const_iterator begin() const { return const_iterator(data_); }
     const_iterator end() const { return const_iterator(data_ + capacity_); }
 };
 
 template <typename T>
-void CircularBuffer<T>::print() const
+void CircularBuffer<T>::print()
 {
     if (!count_)
         EMPTY;
@@ -133,14 +71,14 @@ void CircularBuffer<T>::print() const
         std::cout << "Your circular buffer capacity: " << capacity_ << "." << "\n";
         std::cout << "Your circular buffer contains these elements: " << "\n";
 
-        auto iter = begin();
+        auto from = begin();
         size_t i = 0;
 
-        while (iter != end())
+        while (from != end() && i != count_)
         {
-            std::cout << "[" << i + 1 << "] element" << ": " << *iter << "\n";
+            std::cout << "[" << i + 1 << "] element" << ": " << *from << "\n";
             ++i;
-            ++iter;
+            ++from;
         }
         std::cout << "\n";
     }
@@ -157,11 +95,13 @@ void CircularBuffer<T>::push_back(T element)
     if (!capacity_)
         ZERO_CAPACITY;
 
-    if (current == end()) current = begin();
+    if (head == end()) head = begin();
     if (count_ < capacity_) ++count_;
+    if (count_ == capacity_) tail = head + 1; // смещаем начало в случае, если мы пошли по кольцу
 
-    *current = element;
-    ++current;
+    traits_t::construct(alloc_, data_ + std::distance(begin(), head), element);
+
+    ++head;
 }
 
 template <typename T>
@@ -169,9 +109,9 @@ void CircularBuffer<T>::pop_back()
 {
     if (count_ > 1)
     {
-        auto iter = end() - 1;
-        while (!reinterpret_cast<int>(*iter)) --iter;
-        *iter = 0;
+        traits_t::destroy(alloc_, data_ + std::distance(begin(), head) - 1);
+        if (head == begin()) head = end(); // переброс в конец кольца
+        --head;
     }
     else if (count_)
         traits_t::deallocate(alloc_, data_, capacity_);
@@ -187,13 +127,13 @@ void CircularBuffer<T>::push_front(T element)
     if (!capacity_)
         ZERO_CAPACITY;
 
-    for (size_t i = capacity_ - 1; i > 0; --i)
-        data_[i] = data_[i - 1];
+    traits_t::construct(alloc_, data_ + std::distance(begin(), tail), element);
 
-    data_[0] = element;
+    if (tail == begin()) tail = end();
+    if (count_ < capacity_) ++count_;
+    if (count_ == capacity_) head = tail - 1; // смещение конца относительно начала
 
-    if (count_ < capacity_)
-        ++count_;
+    --tail;
 }
 
 template <typename T>
@@ -201,9 +141,9 @@ void CircularBuffer<T>::pop_front()
 {
     if (count_ > 1)
     {
-        auto iter = begin();
-        while (!reinterpret_cast<int>(*iter)) ++iter;
-        *iter = 0;
+        traits_t::destroy(alloc_, data_ + std::distance(begin(), tail) - 1);
+        if (tail == end()) head = begin(); // переброс в конец кольца
+        ++tail;
     }
     else if (count_)
         traits_t::deallocate(alloc_, data_, capacity_);
@@ -214,7 +154,7 @@ void CircularBuffer<T>::pop_front()
 }
 
 template <typename T>
-void CircularBuffer<T>::new_capacity(size_t new_cap) // линия :(
+void CircularBuffer<T>::new_capacity(size_t new_cap)
 {
     if (new_cap < count_)
         RESIZE_ERROR;
@@ -222,7 +162,6 @@ void CircularBuffer<T>::new_capacity(size_t new_cap) // линия :(
     T *new_mem = traits_t::allocate(alloc_, new_cap);
 
     auto iter_new = iterator(new_mem);
-    auto iter_old = begin();
 
     std::copy(begin(), end(), iterator(new_mem));
 

@@ -3,31 +3,25 @@
 
 int main()
 {
-    CircularBuffer<int> buffer_test(3);
+    CircularBuffer<int> cb(3);
 
-    buffer_test.push_back(5);
-    buffer_test.push_back(10);
-    buffer_test.push_back(15);
-    buffer_test.print();                // buff 5 10 15
+    cb.push_back(1);    // +1
+    cb.push_back(2);    // +2
+    cb.push_back(3);    // +3
+    cb.print();                 // 1 2 3
 
-    buffer_test.push_back(20);
-    buffer_test.push_back(666);
-    buffer_test.push_back(30);
-    buffer_test.print();                // buff: 20 666 30
+    cb.push_back(4);    // rewriting
+    cb.push_back(5);
+    cb.print();                 // 4 5 3
+                              // head^ ^tail
 
-    buffer_test.push_front(55);
-    buffer_test.push_front(56);
-    buffer_test.push_front(57);
-    buffer_test.pop_front();
-    buffer_test.pop_front();
-    buffer_test.print(); // buff: 55
-    buffer_test.push_back(555);
-    buffer_test.push_back(666);
-    buffer_test.print(); // buff: 555 666 55
+    cb.pop_back();              // 5 removed
+    cb.pop_front();             // 3 removed
+    cb.print();                 // 4
 
-    std::cout << "Access to the beginning by R-A iterator: " << *(buffer_test.begin()) << "\n"; // 555
-    std::cout << "Access by index: " << buffer_test[1] << " <-- second element!\n"; // 666
-    std::cout << "Access to the end by R-A iterator: " << *(--buffer_test.end()) << "\n\n"; // 55
+    std::cout << "Access to the beginning by R-A iterator: " << *(cb.begin()) << "\n"; // 555
+    std::cout << "Access by index: " << cb[1] << " <-- second element!\n"; // 666
+    std::cout << "Access to the end by R-A iterator: " << *(--cb.end()) << "\n\n"; // 55
 
     return 0;
 }
