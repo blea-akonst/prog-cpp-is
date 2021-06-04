@@ -54,13 +54,13 @@ public:
     typedef CIterator<T> iterator;
     typedef CIteratorConst<T> const_iterator;
 
-    iterator begin() { return iterator(data_); }
-    iterator end() { return iterator(data_ + capacity_); }
+    iterator begin() { return iterator(data_); }            // для взаимодействия с STL и более удобной реализации методов
+    iterator end() { return iterator(data_ + capacity_); }  // не думаю, что для современного ПК 8 или 16 байт будут проблемой
     iterator head = begin();
     iterator tail = begin();
 
-    const_iterator begin() const { return const_iterator(data_); }
-    const_iterator end() const { return const_iterator(data_ + capacity_); }
+    const_iterator begin() const { return const_iterator(data_); }              // ну ладно, 16 или 32
+    const_iterator end() const { return const_iterator(data_ + capacity_); }    // мало же бтв
 };
 
 template <typename T>
