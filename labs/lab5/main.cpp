@@ -1,27 +1,48 @@
 #include <iostream>
+#include <unordered_map>
 #include "circular_buffer.h"
+
+using hash_map = std::unordered_map<std::string, std::string>;
 
 int main()
 {
-    CircularBuffer<int> cb(3);
+    CircularBuffer<hash_map> cb(3);
 
-    cb.push_back(1);    // +1
-    cb.push_back(2);    // +2
-    cb.push_back(3);    // +3
-    cb.print();                 // 1 2 3
+    hash_map colors = {
+            {"RED","#FF0000"},
+            {"GREEN","#00FF00"},
+            {"BLUE","#0000FF"}
+    };
 
-    cb.push_back(4);    // rewriting
-    cb.push_back(5);
-    cb.print();                 // 4 5 3
-                              // head^ ^tail
+    hash_map surnames = {
+            {"ANDREW", "STANKEVICH" },
+            {"VLADIMIR", "PUTIN"}
+    };
 
-    cb.pop_back();              // 5 removed
-    cb.pop_front();             // 3 removed
-    cb.print();                 // 4
+    hash_map capitals = {
+            {"Russia", "Moscow"},
+            {"Finland", "Helsinki"}
+    };
 
-    std::cout << "Access to the beginning by R-A iterator: " << *(cb.begin()) << "\n"; // 555
-    std::cout << "Access by index: " << cb[1] << " <-- second element!\n"; // 666
-    std::cout << "Access to the end by R-A iterator: " << *(--cb.end()) << "\n\n"; // 55
+    cb.push_back(colors);
+    cb.push_back(surnames);
+    cb.push_back(capitals);
+
+    cb[0]["BLACK"] = "#000000"; // хочу черный в табличке
+    cb[0]["WHITE"] = "#FFFFFF"; // и белый тоже
+
+    for (hash_map &map: cb)
+    {
+        std::cout << "same hash map:\n";
+        auto iter = map.begin();
+        while (iter != map.end())
+        {
+            if (iter->first == "VLADIMIR") iter->second = "VASILIEV";
+            std::cout << iter->first << " -> " << iter->second << "\n";
+            ++iter;
+        }
+        std::cout << "\n";
+    }
 
     return 0;
 }

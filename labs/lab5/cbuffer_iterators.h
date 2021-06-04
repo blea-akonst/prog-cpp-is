@@ -1,12 +1,12 @@
 #pragma once
 
 template <class T>
-class CIterator: public std::iterator<std::random_access_iterator_tag, T, const T>
+class CIterator: public std::iterator<std::random_access_iterator_tag, T>
 {
 private:
     T* iterator;
 public:
-    CIterator(T* p): iterator(p) {}
+    explicit CIterator(T* p): iterator(p) {}
     CIterator(const CIterator& other): iterator(other.iterator) {}
 
     using type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;
@@ -40,7 +40,7 @@ class CIteratorConst: public std::iterator<std::random_access_iterator_tag, T, c
 private:
     T* iterator;
 public:
-    CIteratorConst(T* p): iterator(p) {}
+    explicit CIteratorConst(T* p): iterator(p) {}
     CIteratorConst(const CIteratorConst& other): iterator(other.iterator) {}
 
     using type = typename std::iterator<std::random_access_iterator_tag, T>::difference_type;

@@ -46,6 +46,9 @@ public:
     void new_capacity(size_t);
     void print();
 
+    size_t get_capacity() { return capacity_; }
+    size_t get_count() { return count_; }
+
     T& operator[] (size_t);
 
     typedef CIterator<T> iterator;
@@ -71,23 +74,28 @@ void CircularBuffer<T>::print()
         std::cout << "Your circular buffer capacity: " << capacity_ << "." << "\n";
         std::cout << "Your circular buffer contains these elements: " << "\n";
 
-        auto iter = begin();
+        auto iter = tail;
         size_t i = 0;
 
-        while (iter != end() && i != count_)
+        while (iter != head)
         {
             std::cout << "[" << i + 1 << "] element" << ": " << *iter << "\n";
             ++i;
-            ++iter;
+            if (iter != end())
+                ++iter;
+            else
+                iter == begin();
         }
         std::cout << "\n";
     }
 }
 
-/* Механика вставки в конец: пока не полно - вставляем в конец, после - перезапись
- * Вставка в начало - вставляем, пока есть капасити, иначе - сдвиг последнего элемента в безызвестность
- * Удаление с конца - удаляем последний элемент из имеющихся
- * Удаление с начала - удаляем первый элемент из имеющихся*/
+/*
+ * Механика вставки в конец: пока не полно - вставляем в конец, после - перезапись со сдвигом начала под ручку
+ * в начало: двигаемся назад, после - перезапись со сдвигом конца под ручку
+ * удаление с конца - удаляем, пока не достигли начала
+ * удаление с начала - удаляем, пока не достигли конца
+                                                                                                            */
 
 template <typename T>
 void CircularBuffer<T>::push_back(T element)
@@ -97,7 +105,11 @@ void CircularBuffer<T>::push_back(T element)
 
     if (head == end()) head = begin();
     if (count_ < capacity_) ++count_;
-    if (count_ == capacity_) tail = head + 1; // смещаем начало в случае, если мы пошли по кольцу
+    if (count_ == capacity_)
+    {
+        tail = head + 1;
+        traits_t::destroy(alloc_, data_ + std::distance(begin(), head));
+    }
 
     traits_t::construct(alloc_, data_ + std::distance(begin(), head), element);
 
@@ -109,8 +121,13 @@ void CircularBuffer<T>::pop_back()
 {
     if (count_ > 1)
     {
-        traits_t::destroy(alloc_, data_ + std::distance(begin(), head) - 1);
-        if (head == begin()) head = end(); // переброс в конец кольца
+        if (head == begin())
+        {
+            traits_t::destroy(alloc_, data_);
+            head = end();
+        }
+        else
+            traits_t::destroy(alloc_, data_ + std::distance(begin(), head) - 1);
         --head;
     }
     else if (count_)
@@ -127,11 +144,16 @@ void CircularBuffer<T>::push_front(T element)
     if (!capacity_)
         ZERO_CAPACITY;
 
-    traits_t::construct(alloc_, data_ + std::distance(begin(), tail), element);
+    if (count_ == capacity_) traits_t::destroy(alloc_, data_ + std::distance(begin(), tail));
+
+    if (tail == begin() && head == begin() && count_)
+        traits_t::construct(alloc_, data_ + std::distance(begin(), end() - 1), element);
+    else
+        traits_t::construct(alloc_, data_ + std::distance(begin(), tail), element);
 
     if (tail == begin()) tail = end();
     if (count_ < capacity_) ++count_;
-    if (count_ == capacity_) head = tail - 1; // смещение конца относительно начала
+    if (count_ == capacity_) head = tail - 1;
 
     --tail;
 }
